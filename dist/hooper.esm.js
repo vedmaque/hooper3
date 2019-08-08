@@ -397,9 +397,9 @@ var Carousel = {
       }
 
       if (this.config.touchDrag) {
-        this.$refs.list.addEventListener('touchstart', this.onDragStart, {
-          passive: true
-        });
+        this.$refs.list.addEventListener('touchstart', this.onDragStart);
+        this.$refs.list.addEventListener(this.isTouch ? 'touchmove' : 'mousemove', this.onDrag);
+        this.$refs.list.addEventListener(this.isTouch ? 'touchend' : 'mouseup', this.onDragEnd);
       }
 
       if (this.config.keysControl) {
@@ -532,8 +532,6 @@ var Carousel = {
       this.isDragging = true;
       this.startPosition.x = this.isTouch ? event.touches[0].clientX : event.clientX;
       this.startPosition.y = this.isTouch ? event.touches[0].clientY : event.clientY;
-      document.addEventListener(this.isTouch ? 'touchmove' : 'mousemove', this.onDrag);
-      document.addEventListener(this.isTouch ? 'touchend' : 'mouseup', this.onDragEnd);
     },
     isInvalidDirection: function isInvalidDirection(deltaX, deltaY) {
       if (!this.config.vertical) {
@@ -562,10 +560,7 @@ var Carousel = {
 
       this.delta.y = deltaY;
       this.delta.x = deltaX;
-
-      if (!this.isTouch) {
-        event.preventDefault();
-      }
+      event.preventDefault();
     },
     onDragEnd: function onDragEnd() {
       var tolerance = this.config.shortDrag ? 0.5 : 0.15;
@@ -586,8 +581,6 @@ var Carousel = {
 
       this.delta.x = 0;
       this.delta.y = 0;
-      document.removeEventListener(this.isTouch ? 'touchmove' : 'mousemove', this.onDrag);
-      document.removeEventListener(this.isTouch ? 'touchend' : 'mouseup', this.onDragEnd);
       this.restartTimer();
     },
     onTransitionend: function onTransitionend() {
@@ -687,6 +680,8 @@ var Carousel = {
   },
   beforeDestroy: function beforeDestroy() {
     window.removeEventListener('resize', this.update);
+    this.$refs.list.removeEventListener(this.isTouch ? 'touchmove' : 'mousemove', this.onDrag);
+    this.$refs.list.removeEventListener(this.isTouch ? 'touchend' : 'mouseup', this.onDragEnd);
 
     if (this.group) {
       EMITTER.$off('slideGroup:'.concat(this.group), this._groupSlideHandler);
@@ -902,7 +897,10 @@ var Slide = {
       return this.index >= this.upper + 1;
     },
     isCurrent: function isCurrent() {
-      return this.index === this.$hooper.currentSlide;
+      return (
+        Math.abs(this.index) === Math.abs(this.$hooper.currentSlide) ||
+        this.$hooper.slidesCount === Math.abs(this.index - this.$hooper.currentSlide)
+      );
     }
   },
   render: function render(h) {
