@@ -221,9 +221,9 @@ export default {
         this.$refs.list.addEventListener('mousedown', this.onDragStart);
       }
       if (this.config.touchDrag) {
-        this.$refs.list.addEventListener('touchstart', this.onDragStart, {
-          passive: true
-        });
+        this.$refs.list.addEventListener('touchstart', this.onDragStart);
+        this.$refs.list.addEventListener(this.isTouch ? 'touchmove' : 'mousemove', this.onDrag);
+        this.$refs.list.addEventListener(this.isTouch ? 'touchend' : 'mouseup', this.onDragEnd);
       }
       if (this.config.keysControl) {
         this.$el.addEventListener('keydown', this.onKeypress);
@@ -322,9 +322,6 @@ export default {
       this.isDragging = true;
       this.startPosition.x = this.isTouch ? event.touches[0].clientX : event.clientX;
       this.startPosition.y = this.isTouch ? event.touches[0].clientY : event.clientY;
-
-      document.addEventListener(this.isTouch ? 'touchmove' : 'mousemove', this.onDrag);
-      document.addEventListener(this.isTouch ? 'touchend' : 'mouseup', this.onDragEnd);
     },
     isInvalidDirection(deltaX, deltaY) {
       if (!this.config.vertical) {
@@ -354,9 +351,7 @@ export default {
       this.delta.y = deltaY;
       this.delta.x = deltaX;
 
-      if (!this.isTouch) {
-        event.preventDefault();
-      }
+      event.preventDefault();
     },
     onDragEnd() {
       const tolerance = this.config.shortDrag ? 0.5 : 0.15;
@@ -373,8 +368,6 @@ export default {
       }
       this.delta.x = 0;
       this.delta.y = 0;
-      document.removeEventListener(this.isTouch ? 'touchmove' : 'mousemove', this.onDrag);
-      document.removeEventListener(this.isTouch ? 'touchend' : 'mouseup', this.onDragEnd);
       this.restartTimer();
     },
     onTransitionend() {
@@ -455,6 +448,8 @@ export default {
   },
   beforeDestroy() {
     window.removeEventListener('resize', this.update);
+    this.$refs.list.removeEventListener(this.isTouch ? 'touchmove' : 'mousemove', this.onDrag);
+    this.$refs.list.removeEventListener(this.isTouch ? 'touchend' : 'mouseup', this.onDragEnd);
     if (this.group) {
       EMITTER.$off(`slideGroup:${this.group}`, this._groupSlideHandler);
     }
