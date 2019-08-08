@@ -45,7 +45,10 @@ export default {
       return this.index >= this.upper + 1;
     },
     isCurrent() {
-      return this.index === this.$hooper.currentSlide;
+      return (
+        Math.abs(this.index) === Math.abs(this.$hooper.currentSlide) ||
+        this.$hooper.slidesCount === Math.abs(this.index - this.$hooper.currentSlide)
+      );
     }
   },
   render(h) {
