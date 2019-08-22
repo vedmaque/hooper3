@@ -932,7 +932,7 @@ var Slide = {
       var index = this.index;
 
       if (lower === -itemsToShow) {
-        return (index >= lower && index <= upper) || (index >= lower + itemsToShow && index <= upper + itemsToShow);
+        return (index >= lower && index <= upper) || (index >= lower + slidesCount && index <= upper + slidesCount);
       }
 
       if (lower === slidesCount) {
