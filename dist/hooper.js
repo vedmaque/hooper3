@@ -934,7 +934,24 @@
       isActive: function isActive() {
         var _this$$hooper$slideBo = this.$hooper.slideBounds,
           upper = _this$$hooper$slideBo.upper,
-          lower = _this$$hooper$slideBo.lower;
+          lower = _this$$hooper$slideBo.lower,
+          itemsToShow = _this$$hooper$slideBo.itemsToShow,
+          slidesCount = _this$$hooper$slideBo.slidesCount;
+
+        if (lower === -itemsToShow) {
+          return (
+            (this.index >= lower && this.index <= upper) ||
+            (this.index >= lower + itemsToShow && this.index <= upper + itemsToShow)
+          );
+        }
+
+        if (lower === slidesCount) {
+          return (
+            (this.index >= lower && this.index <= upper) ||
+            (this.index >= lower - slidesCount && this.index <= upper - slidesCount)
+          );
+        }
+
         return this.index >= lower && this.index <= upper;
       },
       isPrev: function isPrev() {
