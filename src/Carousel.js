@@ -243,11 +243,13 @@ export default {
       }
       if (this.config.mouseDrag) {
         this.$refs.list.addEventListener('mousedown', this.onDragStart);
+        this.$refs.list.addEventListener('mousemove', this.onDrag);
+        this.$refs.list.addEventListener('mouseup', this.onDragEnd);
       }
       if (this.config.touchDrag) {
         this.$refs.list.addEventListener('touchstart', this.onDragStart);
-        this.$refs.list.addEventListener(this.isTouch ? 'touchmove' : 'mousemove', this.onDrag);
-        this.$refs.list.addEventListener(this.isTouch ? 'touchend' : 'mouseup', this.onDragEnd);
+        this.$refs.list.addEventListener('touchmove', this.onDrag);
+        this.$refs.list.addEventListener('touchend', this.onDragEnd);
       }
       if (this.config.keysControl) {
         this.$el.addEventListener('keydown', this.onKeypress);
@@ -491,8 +493,10 @@ export default {
   },
   beforeDestroy() {
     window.removeEventListener('resize', this.update);
-    this.$refs.list.removeEventListener(this.isTouch ? 'touchmove' : 'mousemove', this.onDrag);
-    this.$refs.list.removeEventListener(this.isTouch ? 'touchend' : 'mouseup', this.onDragEnd);
+    this.$refs.list.removeEventListener('touchmove', this.onDrag);
+    this.$refs.list.removeEventListener('mousemove', this.onDrag);
+    this.$refs.list.removeEventListener('touchend', this.onDragEnd);
+    this.$refs.list.removeEventListener('mouseup', this.onDragEnd);
     if (this.group) {
       EMITTER.$off(`slideGroup:${this.group}`, this._groupSlideHandler);
     }
