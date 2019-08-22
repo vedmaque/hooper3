@@ -24,20 +24,16 @@ export default {
       return `width: ${slideWidth}px`;
     },
     isActive() {
-      const { upper, lower, itemsToShow, slidesCount } = this.$hooper.slideBounds;
+      const { itemsToShow, slidesCount, slideBounds } = this.$hooper;
+      const { upper, lower } = slideBounds;
+      const { index } = this;
 
       if (lower === -itemsToShow) {
-        return (
-          (this.index >= lower && this.index <= upper) ||
-          (this.index >= lower + itemsToShow && this.index <= upper + itemsToShow)
-        );
+        return (index >= lower && index <= upper) || (index >= lower + itemsToShow && index <= upper + itemsToShow);
       }
 
       if (lower === slidesCount) {
-        return (
-          (this.index >= lower && this.index <= upper) ||
-          (this.index >= lower - slidesCount && this.index <= upper - slidesCount)
-        );
+        return (index >= lower && index <= upper) || (index >= lower - slidesCount && index <= upper - slidesCount);
       }
 
       return this.index >= lower && this.index <= upper;
