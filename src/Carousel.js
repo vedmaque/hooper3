@@ -116,6 +116,7 @@ export default {
       isTouch: false,
       isHover: false,
       isFocus: false,
+      initialized: false,
       slideWidth: 0,
       slideHeight: 0,
       slidesCount: 0,
@@ -130,6 +131,21 @@ export default {
     };
   },
   computed: {
+    slideBounds() {
+      const { config, currentSlide } = this;
+      // Because the "isActive" depends on the slides shown, not the number of slidable ones.
+      // but upper and lower bounds for Next,Prev depend on whatever is smaller.
+      const siblings = config.itemsToShow;
+      const lower = config.centerMode ? Math.ceil(currentSlide - siblings / 2) : currentSlide;
+      const upper = config.centerMode
+        ? Math.floor(currentSlide + siblings / 2)
+        : Math.floor(currentSlide + siblings - 1);
+
+      return {
+        lower,
+        upper
+      };
+    },
     trackTransform() {
       const { infiniteScroll, vertical, rtl, centerMode } = this.config;
 
@@ -146,12 +162,14 @@ export default {
       if (vertical) {
         return `transform: translate(0, ${translate}px);`;
       }
+
       return `transform: translate(${translate}px, 0);`;
     },
     trackTransition() {
-      if (this.isSliding) {
+      if (this.initialized && this.isSliding) {
         return `transition: ${this.config.transition}ms`;
       }
+
       return '';
     }
   },
@@ -163,6 +181,12 @@ export default {
 
       EMITTER.$off(`slideGroup:${oldVal}`, this._groupSlideHandler);
       this.addGroupListeners();
+    },
+    autoPlay(val, oldVal) {
+      if (val === oldVal) {
+        return;
+      }
+      this.restartTimer();
     }
   },
   methods: {
@@ -214,7 +238,7 @@ export default {
         this.defaults.rtl = getComputedStyle(this.$el).direction === 'rtl';
       }
 
-      if (this.config.autoPlay) {
+      if (this.$props.autoPlay) {
         this.initAutoPlay();
       }
       if (this.config.mouseDrag) {
@@ -236,7 +260,13 @@ export default {
     },
     initAutoPlay() {
       this.timer = new Timer(() => {
-        if (this.isSliding || this.isDragging || (this.isHover && this.config.hoverPause) || this.isFocus) {
+        if (
+          this.isSliding ||
+          this.isDragging ||
+          (this.isHover && this.config.hoverPause) ||
+          this.isFocus ||
+          !this.$props.autoPlay
+        ) {
           return;
         }
         if (this.currentSlide === this.slidesCount - 1 && !this.config.infiniteScroll) {
@@ -301,9 +331,19 @@ export default {
       }
     },
     restartTimer() {
-      if (this.timer) {
-        this.timer.restart();
-      }
+      this.$nextTick(() => {
+        if (this.timer === null && this.$props.autoPlay) {
+          this.initAutoPlay();
+          return;
+        }
+
+        if (this.timer) {
+          this.timer.stop();
+          if (this.$props.autoPlay) {
+            this.timer.start();
+          }
+        }
+      });
     },
     restart() {
       this.$nextTick(() => {
@@ -443,7 +483,10 @@ export default {
     this.$nextTick(() => {
       this.update();
       this.slideTo(this.config.initialSlide || 0);
-      this.$emit('loaded');
+      setTimeout(() => {
+        this.$emit('loaded');
+        this.initialized = true;
+      }, this.transition);
     });
   },
   beforeDestroy() {
@@ -496,20 +539,24 @@ function renderBufferSlides(h, slides) {
   for (let i = 0; i < slidesCount; i++) {
     const slide = slides[i];
     const clonedBefore = cloneNode(h, slide);
-    clonedBefore.data.key = `index-${i - slidesCount}`;
+    let slideIndex = i - slidesCount;
+    clonedBefore.data.key = `before_${i}`;
     clonedBefore.key = clonedBefore.data.key;
+    clonedBefore.componentOptions.propsData.index = slideIndex;
     clonedBefore.data.props = {
-      index: i - slidesCount,
+      index: slideIndex,
       isClone: true
     };
 
     before.push(clonedBefore);
 
     const clonedAfter = cloneNode(h, slide);
-    clonedAfter.data.key = `index-${i + slidesCount}`;
+    slideIndex = i + slidesCount;
+    clonedAfter.data.key = `after_${slideIndex}`;
+    clonedAfter.componentOptions.propsData.index = slideIndex;
     clonedAfter.key = clonedAfter.data.key;
     clonedAfter.data.props = {
-      index: i + slidesCount,
+      index: slideIndex,
       isClone: true
     };
     after.push(clonedAfter);
