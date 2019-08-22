@@ -1,5 +1,5 @@
 /**
- * Hopper 0.3.2
+ * Hopper 0.3.4
  * (c) 2019
  * @license MIT
  */
@@ -78,25 +78,24 @@
     return Date.now();
   }
   function Timer(callback, time) {
-    this.create = function createTimer() {
+    this.create = function() {
       return window.setInterval(callback, time);
     };
 
-    this.stop = function stopTimer() {
+    this.stop = function() {
       if (this.timer) {
         window.clearInterval(this.timer);
         this.timer = null;
       }
     };
 
-    this.start = function startTimer() {
+    this.start = function() {
       if (!this.timer) {
         this.timer = this.create();
       }
     };
 
-    this.restart = function restartTimer(newTime) {
-      time = newTime || time;
+    this.restart = function() {
       this.stop();
       this.start();
     };
@@ -293,6 +292,7 @@
         isTouch: false,
         isHover: false,
         isFocus: false,
+        initialized: false,
         slideWidth: 0,
         slideHeight: 0,
         slidesCount: 0,
@@ -310,6 +310,21 @@
       };
     },
     computed: {
+      slideBounds: function slideBounds() {
+        var config = this.config,
+          currentSlide = this.currentSlide; // Because the "isActive" depends on the slides shown, not the number of slidable ones.
+        // but upper and lower bounds for Next,Prev depend on whatever is smaller.
+
+        var siblings = config.itemsToShow;
+        var lower = config.centerMode ? Math.ceil(currentSlide - siblings / 2) : currentSlide;
+        var upper = config.centerMode
+          ? Math.floor(currentSlide + siblings / 2)
+          : Math.floor(currentSlide + siblings - 1);
+        return {
+          lower: lower,
+          upper: upper
+        };
+      },
       trackTransform: function trackTransform() {
         var _this$config = this.config,
           infiniteScroll = _this$config.infiniteScroll,
@@ -332,7 +347,7 @@
         return 'transform: translate('.concat(translate, 'px, 0);');
       },
       trackTransition: function trackTransition() {
-        if (this.isSliding) {
+        if (this.initialized && this.isSliding) {
           return 'transition: '.concat(this.config.transition, 'ms');
         }
 
@@ -347,6 +362,13 @@
 
         EMITTER.$off('slideGroup:'.concat(oldVal), this._groupSlideHandler);
         this.addGroupListeners();
+      },
+      autoPlay: function autoPlay(val, oldVal) {
+        if (val === oldVal) {
+          return;
+        }
+
+        this.restartTimer();
       }
     },
     methods: {
@@ -399,7 +421,7 @@
           this.defaults.rtl = getComputedStyle(this.$el).direction === 'rtl';
         }
 
-        if (this.config.autoPlay) {
+        if (this.$props.autoPlay) {
           this.initAutoPlay();
         }
 
@@ -430,7 +452,13 @@
         var _this2 = this;
 
         this.timer = new Timer(function() {
-          if (_this2.isSliding || _this2.isDragging || (_this2.isHover && _this2.config.hoverPause) || _this2.isFocus) {
+          if (
+            _this2.isSliding ||
+            _this2.isDragging ||
+            (_this2.isHover && _this2.config.hoverPause) ||
+            _this2.isFocus ||
+            !_this2.$props.autoPlay
+          ) {
             return;
           }
 
@@ -513,15 +541,29 @@
         }
       },
       restartTimer: function restartTimer() {
-        if (this.timer) {
-          this.timer.restart();
-        }
-      },
-      restart: function restart() {
         var _this4 = this;
 
         this.$nextTick(function() {
-          _this4.update();
+          if (_this4.timer === null && _this4.$props.autoPlay) {
+            _this4.initAutoPlay();
+
+            return;
+          }
+
+          if (_this4.timer) {
+            _this4.timer.stop();
+
+            if (_this4.$props.autoPlay) {
+              _this4.timer.start();
+            }
+          }
+        });
+      },
+      restart: function restart() {
+        var _this5 = this;
+
+        this.$nextTick(function() {
+          _this5.update();
         });
       },
       // events handlers
@@ -659,7 +701,7 @@
         }
       },
       addGroupListeners: function addGroupListeners() {
-        var _this5 = this;
+        var _this6 = this;
 
         if (!this.group) {
           return;
@@ -667,7 +709,7 @@
 
         this._groupSlideHandler = function(slideIndex) {
           // set the isSource to false to prevent infinite emitting loop.
-          _this5.slideTo(slideIndex, false);
+          _this6.slideTo(slideIndex, false);
         };
 
         EMITTER.$on('slideGroup:'.concat(this.group), this._groupSlideHandler);
@@ -677,16 +719,20 @@
       this.initDefaults();
     },
     mounted: function mounted() {
-      var _this6 = this;
+      var _this7 = this;
 
       this.initEvents();
       this.addGroupListeners();
       this.$nextTick(function() {
-        _this6.update();
+        _this7.update();
 
-        _this6.slideTo(_this6.config.initialSlide || 0);
+        _this7.slideTo(_this7.config.initialSlide || 0);
 
-        _this6.$emit('loaded');
+        setTimeout(function() {
+          _this7.$emit('loaded');
+
+          _this7.initialized = true;
+        }, _this7.transition);
       });
     },
     beforeDestroy: function beforeDestroy() {
@@ -703,7 +749,7 @@
       }
     },
     render: function render(h) {
-      var _this7 = this;
+      var _this8 = this;
 
       var body = renderBody.call(this, h);
       return h(
@@ -719,16 +765,16 @@
           },
           on: {
             focusin: function focusin() {
-              return (_this7.isFocus = true);
+              return (_this8.isFocus = true);
             },
             focusout: function focusout() {
-              return (_this7.isFocus = false);
+              return (_this8.isFocus = false);
             },
             mouseover: function mouseover() {
-              return (_this7.isHover = true);
+              return (_this8.isHover = true);
             },
             mouseleave: function mouseleave() {
-              return (_this7.isHover = false);
+              return (_this8.isHover = false);
             }
           }
         },
@@ -750,18 +796,22 @@
     for (var i = 0; i < slidesCount; i++) {
       var slide = slides[i];
       var clonedBefore = cloneNode(h, slide);
-      clonedBefore.data.key = 'index-'.concat(i - slidesCount);
+      var slideIndex = i - slidesCount;
+      clonedBefore.data.key = 'before_'.concat(i);
       clonedBefore.key = clonedBefore.data.key;
+      clonedBefore.componentOptions.propsData.index = slideIndex;
       clonedBefore.data.props = {
-        index: i - slidesCount,
+        index: slideIndex,
         isClone: true
       };
       before.push(clonedBefore);
       var clonedAfter = cloneNode(h, slide);
-      clonedAfter.data.key = 'index-'.concat(i + slidesCount);
+      slideIndex = i + slidesCount;
+      clonedAfter.data.key = 'after_'.concat(slideIndex);
+      clonedAfter.componentOptions.propsData.index = slideIndex;
       clonedAfter.key = clonedAfter.data.key;
       clonedAfter.data.props = {
-        index: i + slidesCount,
+        index: slideIndex,
         isClone: true
       };
       after.push(clonedAfter);
@@ -865,7 +915,6 @@
       },
       index: {
         type: Number,
-        default: 0,
         required: true
       }
     },
@@ -882,36 +931,24 @@
 
         return 'width: '.concat(slideWidth, 'px');
       },
-      lower: function lower() {
-        var _ref2 = this.$hooper || {},
-          config = _ref2.config,
-          currentSlide = _ref2.currentSlide;
-
-        var siblings = config.itemsToShow;
-        return config.centerMode ? Math.ceil(currentSlide - siblings / 2) : currentSlide;
-      },
-      upper: function upper() {
-        var _ref3 = this.$hooper || {},
-          config = _ref3.config,
-          currentSlide = _ref3.currentSlide;
-
-        var siblings = config.itemsToShow;
-        return config.centerMode ? Math.floor(currentSlide + siblings / 2) : Math.floor(currentSlide + siblings - 1);
-      },
       isActive: function isActive() {
-        return this.index >= this.lower && this.index <= this.upper;
+        var _this$$hooper$slideBo = this.$hooper.slideBounds,
+          upper = _this$$hooper$slideBo.upper,
+          lower = _this$$hooper$slideBo.lower;
+        return this.index >= lower && this.index <= upper;
       },
       isPrev: function isPrev() {
-        return this.index <= this.lower - 1;
+        var lower = this.$hooper.slideBounds.lower;
+        var itemsToSlide = this.$hooper.config.itemsToSlide;
+        return this.index < lower && this.index >= lower - itemsToSlide;
       },
       isNext: function isNext() {
-        return this.index >= this.upper + 1;
+        var upper = this.$hooper.slideBounds.upper;
+        var itemsToSlide = this.$hooper.config.itemsToSlide;
+        return this.index > upper && this.index <= upper + itemsToSlide;
       },
       isCurrent: function isCurrent() {
-        return (
-          Math.abs(this.index) === Math.abs(this.$hooper.currentSlide) ||
-          this.$hooper.slidesCount === Math.abs(this.index - this.$hooper.currentSlide)
-        );
+        return this.index === this.$hooper.currentSlide;
       }
     },
     render: function render(h) {
