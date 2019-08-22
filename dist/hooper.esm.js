@@ -923,24 +923,20 @@ var Slide = {
       return 'width: '.concat(slideWidth, 'px');
     },
     isActive: function isActive() {
-      var _this$$hooper$slideBo = this.$hooper.slideBounds,
-        upper = _this$$hooper$slideBo.upper,
-        lower = _this$$hooper$slideBo.lower,
-        itemsToShow = _this$$hooper$slideBo.itemsToShow,
-        slidesCount = _this$$hooper$slideBo.slidesCount;
+      var _this$$hooper = this.$hooper,
+        itemsToShow = _this$$hooper.itemsToShow,
+        slidesCount = _this$$hooper.slidesCount,
+        slideBounds = _this$$hooper.slideBounds;
+      var upper = slideBounds.upper,
+        lower = slideBounds.lower;
+      var index = this.index;
 
       if (lower === -itemsToShow) {
-        return (
-          (this.index >= lower && this.index <= upper) ||
-          (this.index >= lower + itemsToShow && this.index <= upper + itemsToShow)
-        );
+        return (index >= lower && index <= upper) || (index >= lower + itemsToShow && index <= upper + itemsToShow);
       }
 
       if (lower === slidesCount) {
-        return (
-          (this.index >= lower && this.index <= upper) ||
-          (this.index >= lower - slidesCount && this.index <= upper - slidesCount)
-        );
+        return (index >= lower && index <= upper) || (index >= lower - slidesCount && index <= upper - slidesCount);
       }
 
       return this.index >= lower && this.index <= upper;
