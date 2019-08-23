@@ -587,7 +587,7 @@ var Carousel = {
       return false;
     },
     onDrag: function onDrag(event) {
-      if (this.isSliding) {
+      if (!this.isDragging || this.isSliding) {
         return;
       }
 
